@@ -1,0 +1,16 @@
+server:
+  port: 9001
+
+spring:
+  application:
+    name: behavior-service
+
+# 自訂 HDFS 與 Log 設定
+hdfs:
+  defaultFS: hdfs://namenode:8020
+  base:
+    path: /data/raw/user_behavior
+
+behavior:
+  log:
+    dir: logs/behavior

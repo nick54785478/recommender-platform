@@ -1,0 +1,278 @@
+networks:
+  hadoop-net:
+    driver: bridge
+
+volumes:
+  hadoop_namenode:
+  hadoop_datanode:
+  hadoop_historyserver:
+  hive_metastore_db:
+  hbase_zookeeper:
+  hbase_master:
+
+services:
+  # ==========================================
+  # ZooKeeper (HBase 協調與鎖定服務)
+  # ==========================================
+  zookeeper:
+    image: zookeeper:3.8
+    container_name: zookeeper
+    hostname: zookeeper
+    networks:
+      - hadoop-net
+    ports:
+      - "2181:2181"
+    volumes:
+      - hbase_zookeeper:/data
+
+  # ==========================================
+  # Hadoop HDFS (NameNode & DataNode)
+  # ==========================================
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    hostname: namenode
+    networks:
+      - hadoop-net
+    ports:
+      - "9870:9870"   # NameNode Web UI
+      - "8020:8020"   # HDFS IPC Port
+    volumes:
+      - hadoop_namenode:/hadoop/dfs/name
+    environment:
+      - CLUSTER_NAME=dev-cluster
+    env_file:
+      - ./hadoop.env
+
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode
+    hostname: datanode
+    depends_on:
+      - namenode
+    networks:
+      - hadoop-net
+    ports:
+      - "9864:9864"   # DataNode Web UI
+      - "9866:9866"   # DataNode IPC/Data Transfer Port
+    volumes:
+      - hadoop_datanode:/hadoop/dfs/data
+    env_file:
+      - ./hadoop.env
+
+  # ==========================================
+  # Hadoop YARN (Resource Manager & Node Manager)
+  # ==========================================
+  resourcemanager:
+    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
+    container_name: resourcemanager
+    hostname: resourcemanager
+    depends_on:
+      - namenode
+      - datanode
+    networks:
+      - hadoop-net
+    ports:
+      - "8088:8088"   # YARN Web UI
+    env_file:
+      - ./hadoop.env
+
+  nodemanager:
+    image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
+    container_name: nodemanager
+    hostname: nodemanager
+    depends_on:
+      - namenode
+      - datanode
+      - resourcemanager
+    networks:
+      - hadoop-net
+    ports:
+      - "8042:8042"   # NodeManager Web UI
+    env_file:
+      - ./hadoop.env
+
+  historyserver:
+    image: bde2020/hadoop-historyserver:2.0.0-hadoop3.2.1-java8
+    container_name: historyserver
+    hostname: historyserver
+    depends_on:
+      - namenode
+      - datanode
+    networks:
+      - hadoop-net
+    ports:
+      - "8188:8188"
+    volumes:
+      - hadoop_historyserver:/hadoop/yarn/timeline
+    env_file:
+      - ./hadoop.env
+
+  # ==========================================
+  # Apache Hive (Metastore DB + Metastore + HiveServer2)
+  # ==========================================
+  hive-metastore-db:
+    image: postgres:13
+    container_name: hive-metastore-db
+    hostname: hive-metastore-db
+    networks:
+      - hadoop-net
+    environment:
+      - POSTGRES_DB=metastore
+      - POSTGRES_USER=hive
+      - POSTGRES_PASSWORD=hive
+    volumes:
+      - hive_metastore_db:/var/lib/postgresql/data
+
+  hive-server:
+    image: bde2020/hive:2.3.2-postgresql-metastore
+    container_name: hive-server
+    hostname: hive-server
+    depends_on:
+      - namenode
+      - datanode
+      - hive-metastore-db
+    networks:
+      - hadoop-net
+    ports:
+      - "10000:10000" # HiveServer2 Thrift Port
+      - "10002:10002" # Hive Web UI
+    environment:
+      - HIVE_SITE_CONF_javax_jdo_option_ConnectionURL=jdbc:postgresql://hive-metastore-db:5432/metastore
+      - HIVE_SITE_CONF_javax_jdo_option_ConnectionDriverName=org.postgresql.Driver
+      - HIVE_SITE_CONF_javax_jdo_option_ConnectionUserName=hive
+      - HIVE_SITE_CONF_javax_jdo_option_ConnectionPassword=hive
+      - HIVE_SITE_CONF_datanucleus_autoCreateSchema=false
+      - HIVE_SITE_CONF_hive_metastore_warehouse_dir=hdfs://namenode:8020/user/hive/warehouse
+    env_file:
+      - ./hadoop.env
+
+  # ==========================================
+  # Apache Spark (Master & Worker)
+  # ==========================================
+  spark-master:
+    image: bde2020/spark-master:3.0.0-hadoop3.2
+    container_name: spark-master
+    hostname: spark-master
+    depends_on:
+      - namenode
+      - datanode
+    networks:
+      - hadoop-net
+    ports:
+      - "8080:8080"   # Spark Master Web UI
+      - "7077:7077"   # Spark Master Port
+    environment:
+      - INIT_DAEMON_STEP=setup_spark
+      - SPARK_MASTER_HOST=spark-master
+    env_file:
+      - ./hadoop.env
+
+  spark-worker:
+    image: bde2020/spark-worker:3.0.0-hadoop3.2
+    container_name: spark-worker
+    hostname: spark-worker
+    depends_on:
+      - spark-master
+    networks:
+      - hadoop-net
+    ports:
+      - "8081:8081"   # Spark Worker Web UI
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2G
+    env_file:
+      - ./hadoop.env
+
+  # ==========================================
+  # Apache HBase (Master & RegionServer)
+  # ==========================================
+  hbase-master:
+    image: dajobe/hbase:latest
+    container_name: hbase-master
+    hostname: hbase-master
+    depends_on:
+      - zookeeper
+      - namenode
+      - datanode
+    networks:
+      - hadoop-net
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        cat <<EOF > /opt/hbase/conf/hbase-site.xml
+        <?xml version="1.0"?>
+        <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+        <configuration>
+          <property>
+            <name>hbase.cluster.distributed</name>
+            <value>true</value>
+          </property>
+          <property>
+            <name>hbase.rootdir</name>
+            <value>hdfs://namenode:8020/hbase</value>
+          </property>
+          <property>
+            <name>hbase.zookeeper.quorum</name>
+            <value>zookeeper</value>
+          </property>
+          <property>
+            <name>hbase.zookeeper.property.clientPort</name>
+            <value>2181</value>
+          </property>
+          <property>
+            <name>hbase.unsafe.stream.capability.enforce</name>
+            <value>false</value>
+          </property>
+        </configuration>
+        EOF
+        hbase master start
+    ports:
+      - "16010:16010" # HBase Master Web UI
+      - "16000:16000" # HBase Master RPC
+    volumes:
+      - hbase_master:/data
+
+  hbase-regionserver:
+    image: dajobe/hbase:latest
+    container_name: hbase-regionserver
+    hostname: hbase-regionserver
+    depends_on:
+      - hbase-master
+      - zookeeper
+    networks:
+      - hadoop-net
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        cat <<EOF > /opt/hbase/conf/hbase-site.xml
+        <?xml version="1.0"?>
+        <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+        <configuration>
+          <property>
+            <name>hbase.cluster.distributed</name>
+            <value>true</value>
+          </property>
+          <property>
+            <name>hbase.rootdir</name>
+            <value>hdfs://namenode:8020/hbase</value>
+          </property>
+          <property>
+            <name>hbase.zookeeper.quorum</name>
+            <value>zookeeper</value>
+          </property>
+          <property>
+            <name>hbase.zookeeper.property.clientPort</name>
+            <value>2181</value>
+          </property>
+          <property>
+            <name>hbase.unsafe.stream.capability.enforce</name>
+            <value>false</value>
+          </property>
+        </configuration>
+        EOF
+        hbase regionserver start
+    ports:
+      - "16030:16030" # HBase RegionServer Web UI
+      - "16020:16020" # HBase RegionServer RPC

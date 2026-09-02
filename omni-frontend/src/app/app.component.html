@@ -1,0 +1,74 @@
+<div class="app-container">
+  
+  <!-- Header / Nav -->
+  <nav class="navbar glass-panel">
+    <div class="brand">
+      <span class="logo">✈️</span>
+      <h1>OmniTravel</h1>
+    </div>
+    <div class="user-switcher">
+      <span class="label">Simulate User:</span>
+      <div class="pill-group">
+        <button 
+          *ngFor="let user of users" 
+          [class.active]="user === selectedUser"
+          (click)="selectUser(user)"
+          class="pill-btn">
+          {{ user }}
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="hero">
+    <div class="hero-content">
+      <h2 class="animate-fade-in">Welcome back, <span class="highlight">{{ selectedUser }}</span>!</h2>
+      <p class="subtitle">Here are the best flight promotions tailored exactly to your recent searches and preferences.</p>
+    </div>
+  </header>
+
+  <!-- Recommendation Section -->
+  <main class="content">
+    
+    <div class="section-header">
+      <h3>Recommended For You</h3>
+      <span class="badge" *ngIf="recommendations && !recommendations.fallback">✨ AI Personalized</span>
+      <span class="badge fallback" *ngIf="recommendations?.fallback">🔥 Trending Now</span>
+    </div>
+
+    <!-- Loading State -->
+    <div class="grid" *ngIf="loading">
+      <div class="card skeleton glass-panel" *ngFor="let i of [1,2,3]">
+        <div class="skeleton-img"></div>
+        <div class="skeleton-text title"></div>
+        <div class="skeleton-text"></div>
+      </div>
+    </div>
+
+    <!-- Data Loaded State -->
+    <div class="grid" *ngIf="!loading && recommendations">
+      <div 
+        class="card glass-panel" 
+        *ngFor="let item of recommendations.items" 
+        (click)="onItemClick(item.itemId)">
+        
+        <div class="card-img-wrapper">
+          <img [src]="getImage(item.itemId)" [alt]="item.itemId" class="card-img">
+          <div class="overlay">
+            <span class="view-btn">View Details</span>
+          </div>
+        </div>
+        
+        <div class="card-content">
+          <div class="card-header">
+            <h4>{{ item.itemId.split('-').join(' to ') }}</h4>
+            <span class="score-badge">Match: {{ (item.score * 100) | number:'1.0-0' }}%</span>
+          </div>
+          <p class="desc">Exclusive promotion selected just for you based on our machine learning algorithm.</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>

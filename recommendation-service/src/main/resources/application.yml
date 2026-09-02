@@ -1,0 +1,13 @@
+server:
+  port: 9002
+
+spring:
+  application:
+    name: recommendation-service
+
+# HBase Configuration Placeholder
+hbase:
+  zookeeper:
+    quorum: localhost
+    property:
+      clientPort: 2181

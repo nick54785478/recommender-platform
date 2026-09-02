@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- Console Appender for general logs -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- RollingFileAppender specifically for behavior logs -->
+    <appender name="BEHAVIOR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/behavior/current.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- 為了測試方便，改為每分鐘 rolling 一次 -->
+            <fileNamePattern>logs/behavior/behavior-%d{yyyy-MM-dd-HH-mm}.log.gz</fileNamePattern>
+            <maxHistory>72</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- AsyncAppender to wrap BEHAVIOR_FILE for ultra-low latency -->
+    <appender name="ASYNC_BEHAVIOR_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <!-- 佇列大小 -->
+        <queueSize>10000</queueSize>
+        <!-- 不要丟棄任何層級的日誌 (預設滿 80% 會丟棄 TRACE/DEBUG/INFO) -->
+        <discardingThreshold>0</discardingThreshold>
+        <appender-ref ref="BEHAVIOR_FILE" />
+    </appender>
+
+    <!-- 定義專屬 Logger，不往 root 傳遞避免重複列印到 Console -->
+    <logger name="BEHAVIOR_FILE_LOGGER" level="INFO" additivity="false">
+        <appender-ref ref="ASYNC_BEHAVIOR_FILE" />
+    </logger>
+
+    <!-- Root Logger -->
+    <root level="INFO">
+        <appender-ref ref="STDOUT" />
+    </root>
+
+</configuration>

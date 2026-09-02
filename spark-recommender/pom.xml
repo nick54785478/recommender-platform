@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.omni.recommender</groupId>
+        <artifactId>omni-recommender-platform</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>spark-recommender</artifactId>
+    <name>spark-recommender</name>
+    <description>Spark Batch Processing and ALS Recommendation Model</description>
+
+    <properties>
+        <spark.version>3.5.1</spark.version>
+        <hbase.version>2.5.5</hbase.version>
+        <hadoop.version>3.2.1</hadoop.version>
+        <scala.binary.version>2.12</scala.binary.version>
+        <!-- 強制覆寫 Spring Boot 3 帶來的 Jersey 3.x，Spark WebUI 只能吃 Jersey 2.x (javax.servlet) -->
+        <jersey.version>2.40</jersey.version>
+    </properties>
+
+    <dependencies>
+        <!-- Spark Core & SQL -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_${scala.binary.version}</artifactId>
+            <version>${spark.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_${scala.binary.version}</artifactId>
+            <version>${spark.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Spark MLlib for ALS -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-mllib_${scala.binary.version}</artifactId>
+            <version>${spark.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- HBase Client & Common -->
+        <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-client</artifactId>
+            <version>${hbase.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>log4j</groupId>
+                    <artifactId>log4j</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <version>${hadoop.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Maven Compiler Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>17</source>
+                    <target>17</target>
+                </configuration>
+            </plugin>
+            
+            <!-- Maven Assembly Plugin for fat jar (spark-submit) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.6.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.omni.recommender.spark.RecommenderBatchJob</mainClass>
+                        </manifest>
+                    </archive>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            <!-- 專為 Java 17+ 準備的本地執行外掛，內建所有 Spark 需要的後門參數 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <!-- 強制包含 provided 範圍的 Spark 依賴 -->
+                    <classpathScope>test</classpathScope>
+                    <!-- 強制使用與 Maven/IDE 相同的 Java 版本，避免系統環境變數吃到舊版 Java 8 -->
+                    <executable>${java.home}/bin/java</executable>
+                    <arguments>
+                        <argument>--add-opens=java.base/java.lang=ALL-UNNAMED</argument>
+                        <argument>--add-opens=java.base/java.lang.invoke=ALL-UNNAMED</argument>
+                        <argument>--add-opens=java.base/java.lang.reflect=ALL-UNNAMED</argument>
+                        <argument>--add-opens=java.base/java.io=ALL-UNNAMED</argument>
+                        <argument>--add-opens=java.base/java.net=ALL-UNNAMED</argument>
+                        <argument>--add-opens=java.base/java.nio=ALL-UNNAMED</argument>
+                        <argument>--add-opens=java.base/java.util=ALL-UNNAMED</argument>
+                        <argument>--add-opens=java.base/java.util.concurrent=ALL-UNNAMED</argument>
+                        <argument>--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED</argument>
+                        <argument>--add-opens=java.base/sun.nio.ch=ALL-UNNAMED</argument>
+                        <argument>--add-opens=java.base/sun.nio.cs=ALL-UNNAMED</argument>
+                        <argument>--add-opens=java.base/sun.security.action=ALL-UNNAMED</argument>
+                        <argument>--add-opens=java.base/sun.util.calendar=ALL-UNNAMED</argument>
+                        <argument>-classpath</argument>
+                        <classpath/>
+                        <argument>com.omni.recommender.spark.RecommenderBatchJob</argument>
+                    </arguments>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
