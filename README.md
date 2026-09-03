@@ -10,7 +10,11 @@ Omni-Recommender Platform 是一個端到端 (End-to-End) 的「大數據用戶�
 
 1. **`omni-frontend` (前端體驗層)**
    - 基於 **Angular 18** 打造的高質感旅遊預訂平台。
-   - 提供直覺的 UI，展示毛玻璃特效與暗黑模式，並即時呈現來自後端的 AI 推薦機票行程。
+   - **Modern UI/UX**：採用毛玻璃 (Glassmorphism) 特效與暗黑模式 (Dark Mode)，帶給使用者沉浸式體驗。
+   - **AI Personalization**：將「✨ Recommended For You」專屬推薦置於最顯眼處，支援優雅的動畫展開與收合。
+   - **Quick View Modal**：精緻的快速預覽彈窗，不跳轉頁面即可查看行程細節，並將用戶互動 (View, Like, Add to Cart) 無縫即時傳回 HBase。
+   - **Live Activity Console**：右下角內建可摺疊的實時行為監控視窗，視覺化展示日誌的即時收集過程。
+   - **Rich Mock Data & Storefront**：內建包含東京、大阪、首爾、新加坡、香港，以及最新加入的 **上海、北京、北海道、沖繩** 等多國高畫質行程資料，並支援完整的條件搜尋與分頁 (Pagination) 瀏覽。
 
 2. **`behavior-service` (行為採集微服務)**
    - 基於 **Spring Boot (Java 22)**，負責接收前端使用者的點擊、瀏覽等行為日誌。

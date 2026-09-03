@@ -1,5 +1,6 @@
 package com.omni.recommender.behavior.presentation.controller;
 
+import com.omni.recommender.behavior.application.port.in.GetRecentBehaviorsUseCase;
 import com.omni.recommender.behavior.application.port.in.LogBehaviorUseCase;
 import com.omni.recommender.behavior.presentation.assembler.BehaviorResourceAssembler;
 import com.omni.recommender.behavior.presentation.resource.in.LogBehaviorResource;
@@ -8,16 +9,15 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 接收用戶行為打點的 REST Controller
  */
-import org.springframework.web.bind.annotation.CrossOrigin;
-
 @RestController
 @CrossOrigin(origins = "*")
 @RequestMapping("/api/v1/behaviors")
@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 public class BehaviorController {
 
     private final LogBehaviorUseCase logBehaviorUseCase;
+    private final GetRecentBehaviorsUseCase getRecentBehaviorsUseCase;
     private final BehaviorResourceAssembler assembler;
 
     @PostMapping("/log")
@@ -43,5 +44,20 @@ public class BehaviorController {
                 .build();
                 
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
+    }
+    
+    @GetMapping("/{userId}")
+    public ResponseEntity<List<Map<String, Object>>> getRecentBehaviors(@PathVariable String userId) {
+        var behaviors = getRecentBehaviorsUseCase.getRecentBehaviors(userId, 10);
+        
+        // Convert Domain to simple map for frontend
+        var response = behaviors.stream().map(b -> Map.<String, Object>of(
+            "userId", b.getUserId().value(),
+            "itemId", b.getItemId() != null ? b.getItemId().value() : "",
+            "behaviorType", b.getBehaviorType().name(),
+            "timestamp", b.getTimestamp().toEpochMilli()
+        )).collect(Collectors.toList());
+        
+        return ResponseEntity.ok(response);
     }
 }

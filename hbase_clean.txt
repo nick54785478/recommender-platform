@@ -1,0 +1,4 @@
+disable 'user_behavior_history'
+drop 'user_behavior_history'
+disable 'recommendation'
+drop 'recommendation'

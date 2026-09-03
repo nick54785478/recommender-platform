@@ -14,3 +14,9 @@ hdfs:
 behavior:
   log:
     dir: logs/behavior
+
+hbase:
+  zookeeper:
+    quorum: zookeeper
+    property:
+      clientPort: 2181

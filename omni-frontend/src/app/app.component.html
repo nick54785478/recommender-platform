@@ -28,47 +28,224 @@
     </div>
   </header>
 
-  <!-- Recommendation Section -->
-  <main class="content">
-    
-    <div class="section-header">
-      <h3>Recommended For You</h3>
-      <span class="badge" *ngIf="recommendations && !recommendations.fallback">✨ AI Personalized</span>
-      <span class="badge fallback" *ngIf="recommendations?.fallback">🔥 Trending Now</span>
+  <!-- Recommendation Section (Moved Up) -->
+  <section class="content recommendation-section">
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <h3>✨ Recommended For You</h3>
+        <span class="badge" *ngIf="recommendations && !recommendations.fallback">🤖 AI Personalized</span>
+        <span class="badge fallback" *ngIf="recommendations?.fallback">🔥 Trending Now</span>
+      </div>
+      <button class="book-btn" style="flex: unset; padding: 10px 20px; border-radius: 30px; box-shadow: 0 4px 15px rgba(244, 114, 182, 0.4);" (click)="toggleRecommendations()">
+        {{ showRecommendations ? '⬆️ Hide Recommendations' : '🚀 Get AI Recommendations' }}
+      </button>
     </div>
 
-    <!-- Loading State -->
-    <div class="grid" *ngIf="loading">
-      <div class="card skeleton glass-panel" *ngFor="let i of [1,2,3]">
+    <div *ngIf="showRecommendations" style="animation: fade-in 0.3s ease-out; margin-top: 1.5rem;">
+      <div class="grid" *ngIf="loadingRecommendations">
+        <div class="card skeleton glass-panel" *ngFor="let i of [1,2,3]">
+          <div class="skeleton-img"></div>
+          <div class="skeleton-text title"></div>
+          <div class="skeleton-text"></div>
+        </div>
+      </div>
+
+      <div class="grid highlight-grid" *ngIf="!loadingRecommendations && recommendedItineraries.length > 0">
+        <div class="card glass-panel recommended-card" *ngFor="let item of recommendedItineraries">
+          
+          <div class="card-img-wrapper" (click)="onView(item)">
+            <img [src]="item.imageUrl" [alt]="item.title" class="card-img">
+            <div class="overlay">
+              <span class="view-btn">👀 View Details</span>
+            </div>
+            <div class="price-tag">
+              {{ item.currency }} {{ item.price | number }}
+            </div>
+            <button class="icon-btn like-btn" (click)="onLike(item.id); $event.stopPropagation()">
+              ❤️
+            </button>
+          </div>
+          
+          <div class="card-content">
+            <div class="card-header" style="display: flex; flex-direction: column; gap: 0.25rem;">
+              <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                <h4>{{ item.title }}</h4>
+                <span class="days-badge">⏳ {{ item.days }} Days</span>
+              </div>
+              <span style="font-size: 0.85rem; color: #94a3b8;">📍 {{ item.country }}</span>
+            </div>
+            <!-- Get Score from recommendations list -->
+            <div class="ai-reason" *ngIf="recommendations && recommendations.items">
+              <span class="score-badge" *ngFor="let rec of recommendations.items">
+                <ng-container *ngIf="rec.itemId === item.id">
+                  Match: {{ (rec.score * 100) | number:'1.0-0' }}%
+                </ng-container>
+              </span>
+            </div>
+            <p class="desc">{{ item.description }}</p>
+            <div class="card-footer dual-btn">
+              <button class="secondary-btn" (click)="onAddToCart(item.id)">🛒 Cart</button>
+              <button class="book-btn" (click)="onPurchase(item.id)">💳 Book</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- Storefront Section -->
+  <main class="content">
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+      <div>
+        <h3>🌍 Explore All Destinations</h3>
+        <span class="badge fallback">Storefront</span>
+      </div>
+      
+      <!-- Search & Filter Bar -->
+      <div class="search-bar" style="display: flex; gap: 10px; align-items: center; background: rgba(255, 255, 255, 0.05); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (keyup.enter)="onSearch()"
+          placeholder="Search destinations..." 
+          style="padding: 8px 12px; border-radius: 6px; border: none; background: rgba(0,0,0,0.2); color: white; outline: none; width: 200px;">
+        
+        <select 
+          [(ngModel)]="selectedTag" 
+          (change)="onSearch()"
+          style="padding: 8px; border-radius: 6px; border: none; background: rgba(0,0,0,0.2); color: white; outline: none; cursor: pointer;">
+          <option value="">All Tags</option>
+          <option *ngFor="let tag of availableTags" [value]="tag">{{ tag }}</option>
+        </select>
+        
+        <button class="search-btn" style="padding: 8px 15px; margin-left: 5px;" (click)="onSearch()">🔍 Search</button>
+        <button class="secondary-btn" style="padding: 8px 15px; margin-left: 5px;" (click)="clearSearch()" *ngIf="searchTerm || selectedTag">❌ Clear</button>
+      </div>
+    </div>
+
+    <div class="grid" *ngIf="loadingStorefront">
+      <div class="card skeleton glass-panel" *ngFor="let i of [1,2,3,4,5,6]">
         <div class="skeleton-img"></div>
         <div class="skeleton-text title"></div>
         <div class="skeleton-text"></div>
       </div>
     </div>
 
-    <!-- Data Loaded State -->
-    <div class="grid" *ngIf="!loading && recommendations">
-      <div 
-        class="card glass-panel" 
-        *ngFor="let item of recommendations.items" 
-        (click)="onItemClick(item.itemId)">
+    <div class="grid" *ngIf="!loadingStorefront && paginatedItineraries.length > 0">
+      <div class="card glass-panel" *ngFor="let item of paginatedItineraries">
         
-        <div class="card-img-wrapper">
-          <img [src]="getImage(item.itemId)" [alt]="item.itemId" class="card-img">
+        <div class="card-img-wrapper" (click)="onView(item)">
+          <img [src]="item.imageUrl" [alt]="item.title" class="card-img">
           <div class="overlay">
-            <span class="view-btn">View Details</span>
+            <span class="view-btn">👀 Quick View</span>
           </div>
+          <div class="price-tag">
+            {{ item.currency }} {{ item.price | number }}
+          </div>
+          <button class="icon-btn like-btn" (click)="onLike(item.id); $event.stopPropagation()">
+            ❤️
+          </button>
         </div>
         
         <div class="card-content">
-          <div class="card-header">
-            <h4>{{ item.itemId.split('-').join(' to ') }}</h4>
-            <span class="score-badge">Match: {{ (item.score * 100) | number:'1.0-0' }}%</span>
+          <div class="card-header" style="display: flex; flex-direction: column; gap: 0.25rem;">
+            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+              <h4>{{ item.title }}</h4>
+              <span class="days-badge">⏳ {{ item.days }} Days</span>
+            </div>
+            <span style="font-size: 0.85rem; color: #94a3b8;">📍 {{ item.country }}</span>
           </div>
-          <p class="desc">Exclusive promotion selected just for you based on our machine learning algorithm.</p>
+          <p class="desc">{{ item.description }}</p>
+          <div class="tags-container">
+            <span class="tag" *ngFor="let tag of item.tags">#{{ tag }}</span>
+          </div>
+          <div class="card-footer dual-btn">
+            <button class="secondary-btn" (click)="onAddToCart(item.id)">🛒 Add to Cart</button>
+            <button class="book-btn" (click)="onPurchase(item.id)">💳 Book Now</button>
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- Pagination Controls -->
+    <div class="pagination-container" *ngIf="!loadingStorefront && totalPages > 1">
+      <button class="page-btn" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">
+        ◀ Prev
+      </button>
+      
+      <div class="page-numbers">
+        <button 
+          class="page-btn" 
+          *ngFor="let page of pageNumbers" 
+          [class.active]="currentPage === page"
+          (click)="goToPage(page)">
+          {{ page }}
+        </button>
+      </div>
+
+      <button class="page-btn" [disabled]="currentPage === totalPages" (click)="goToPage(currentPage + 1)">
+        Next ▶
+      </button>
+    </div>
   </main>
+
+
+  <!-- Live Activity Console (HBase Integration) -->
+  <div class="activity-console" [class.collapsed]="!showConsole">
+    <div class="console-header" (click)="showConsole = !showConsole" style="cursor: pointer; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span class="blinking-dot"></span>
+        <h4>Live Activity Stream</h4>
+      </div>
+      <span style="color: var(--text-muted); font-size: 0.8rem;">{{ showConsole ? '▼' : '▲' }}</span>
+    </div>
+    <div class="console-body" *ngIf="showConsole">
+      <div class="console-empty" *ngIf="recentBehaviors.length === 0">
+        Waiting for activity...
+      </div>
+      <div class="console-log" *ngFor="let log of recentBehaviors">
+        <span class="log-time">[{{ log.timestamp | date:'HH:mm:ss' }}]</span>
+        <span class="log-user">{{ log.userId }}</span>
+        <span class="log-action" [ngClass]="log.behaviorType.toLowerCase()">{{ log.behaviorType }}</span>
+        <span class="log-item">{{ log.itemId }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick View Modal -->
+  <div class="modal-overlay animate-fade-in" *ngIf="selectedItinerary" (click)="closeQuickView()">
+    <div class="modal-content glass-panel" (click)="$event.stopPropagation()">
+      <button class="modal-close-btn" (click)="closeQuickView()">✕</button>
+      
+      <div class="modal-img-container">
+        <img [src]="selectedItinerary.imageUrl" [alt]="selectedItinerary.title">
+        <div class="modal-price-tag">{{ selectedItinerary.currency }} {{ selectedItinerary.price | number }}</div>
+        <button class="icon-btn like-btn" (click)="onLike(selectedItinerary.id)">❤️</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="modal-header-row" style="flex-direction: column; gap: 0.5rem;">
+          <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+            <h2>{{ selectedItinerary.title }}</h2>
+            <span class="days-badge">⏳ {{ selectedItinerary.days }} Days</span>
+          </div>
+          <span style="font-size: 1rem; color: #94a3b8;">📍 {{ selectedItinerary.country }}</span>
+        </div>
+        
+        <p class="modal-desc">{{ selectedItinerary.description }}</p>
+        
+        <div class="tags-container" style="margin-bottom: 2rem;">
+          <span class="tag" *ngFor="let tag of selectedItinerary.tags">#{{ tag }}</span>
+        </div>
+        
+        <div class="dual-btn">
+          <button class="secondary-btn" (click)="onAddToCart(selectedItinerary.id)">🛒 Add to Cart</button>
+          <button class="book-btn" (click)="onPurchase(selectedItinerary.id)">💳 Book Now</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
