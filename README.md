@@ -111,8 +111,11 @@ flowchart TD
 2. 開啟檔案 `C:\Windows\System32\drivers\etc\hosts`。
 3. 在檔案最下方加入以下設定並存檔：
 ```text
-127.0.0.1 namenode datanode zookeeper hbase-master hbase-regionserver resourcemanager nodemanager historyserver hive-metastore-db hive-server spark-master spark-worker
+127.0.0.1 namenode datanode zookeeper hbase-master hbase-regionserver resourcemanager nodemanager historyserver hive-metastore-db hive-server spark-master spark-worker hbase-regionserver.omni-recommender-platform_hadoop-net
 ```
+> [!WARNING]
+> **HBase 網路名稱注意事項**：如果你將專案資料夾重新命名（例如改成 `omni-recommender`），Docker 網路名稱也會隨之改變。若啟動 `behavior-service` 時遇到 `UnknownHostException`，請查看錯誤訊息結尾的網域（例如 `hbase-regionserver.omni-recommender_hadoop-net`），並將該網域手動補上你 Windows 的 `hosts` 檔案中。
+
 > 💡 註：在我們的 Java 程式碼 (`behavior-service` 與 `spark-recommender`) 中，已經內建了強制繞過 IP 路由與 `winutils.exe` 檢查的機制，你不需要額外安裝任何 Hadoop 環境變數，只要改好 `hosts` 就能一鍵啟動！
 
 ### 1. 啟動大數據基礎設施
