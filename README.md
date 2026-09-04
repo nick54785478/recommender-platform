@@ -131,6 +131,8 @@ docker-compose up -d
 ```bash
 echo "create 'recommendation', 'cf'" | docker exec -i hbase-master hbase shell -n
 ```
+> [!WARNING]
+> **資料表遺失問題 (`TableNotFoundException`)**：如果您曾經下達 `docker-compose down -v` 重製所有容器，或是將專案搬移到新路徑導致 Docker 重新建立 Volume，HBase 內部的資料將會被清空。若後端微服務拋出 `TableNotFoundException: recommendation`，請務必重新執行上述初始化指令來建立表格，並重新跑一次 Spark 訓練任務把資料倒回去！
 
 ### 3. 啟動後端微服務
 請在您的 Java IDE (如 IntelliJ IDEA) 中，分別啟動以下兩個 Spring Boot 應用程式：
