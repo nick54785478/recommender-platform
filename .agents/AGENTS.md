@@ -5,7 +5,7 @@
 ## 1. Domain Driven Design (DDD, 領域驅動設計)
 - **核心領域至上**：領域模型（Domain Model）須封裝完整的商業規則與領域邏輯（例如 Aggregate Root 聚合根、Value Object 實質物件與 Domain Event 領域事件）。
 - **零框架與零外層依賴**：`domain/` 層內的程式碼為純 Java（Pure Java），**絕對不可**依賴 Spring 框架、JPA 註解、資料庫相關技術，亦**嚴禁**依賴外層的 `application/` 或 `infrastructure/` 套件。
-- **嚴格禁止技術類侵入 Domain Layer**：`domain/` 層內部嚴禁引入或依賴任何框架、資料庫 ORM（如 JPA `Entity`、`Table` 註解、Hibernate）、序列化套件（如 Jackson `@JsonProperty`）、HTTP 協定物件或任何外部基礎設施相關套件，保證領域邏輯的純粹與技術無關性。
+- **嚴格禁止 Lombok 等技術類侵入 Domain Layer**：`domain/` 層內部嚴禁引入或依賴任何框架、資料庫 ORM（如 JPA `Entity`、`Table` 註解、Hibernate）、序列化套件（如 Jackson `@JsonProperty`）、HTTP 協定物件或任何外部基礎設施相關套件，保證領域邏輯的純粹與技術無關性。此外，**Aggregate 內部嚴禁使用 Lombok (如 `@Data`, `@Getter`, `@Setter` 等)**，以確保封裝性不被破壞，屬性必須透過具備業務語意的行為方法進行異動。
 - **領域事件驅動**：當領域狀態變更時，經由 Aggregate 觸發並對外發布對應的 Domain Event。
 - **垂直切片與 Aggregate 聚合 (Vertical Slice Architecture)**：
   - Domain Layer 內部**必須依據 Aggregate (聚合根)** 進行切片與封裝（例如 `domain/task/` 作為 Aggregate 邊界），將該 Aggregate 專屬的 `aggregate/`（Aggregate Root 與 Value Objects）、`event/`（Domain Events）與 `exception/`（領域例外）內聚於此，嚴禁散落於全域共用目錄。
